@@ -10,16 +10,19 @@ DOCKER_BIN="${DOCKER_BIN:=docker}"
 
 if [[ -d "$FILE_ROOT" ]]; then
   dokku_log_info1 "Adding build files to build environment ..."
-
-  # Extract node_modules archive (assuming it's named node_modules.tar)
-  # Check if node_modules.tar exists before extraction
-  if [[ -f "$FILE_ROOT/node_modules.tar" ]]; then
-    tar -xf "$FILE_ROOT/node_modules.tar" -C /app
-  fi
-
-  # Archive and copy remaining build files (if any)
-  tar -cf - -C "$FILE_ROOT" .  | "$DOCKER_BIN" run -i -a stdin $IMAGE tar -xf - -C /app
-
-  # Optional: Remove archive after extraction (if desired)
-  # rm /app/node_modules.tar
+  shopt -s dotglob # include hidden files
+  for path in "$FILE_ROOT/"**; do
+    target_path="/app/${path#$FILE_ROOT/}"  # Extract relative path
+    if [[ -d "$path" ]]; then
+      dokku_log_verbose "- Creating directory: $target_path"
+      "$DOCKER_BIN" run -i "$IMAGE" mkdir -p "$target_path"
+    else
+      dokku_log_verbose "- Copying file: $target_path"
+      id=$("$DOCKER_BIN" run -i -a stdin "$IMAGE" /bin/bash -c "cat > '$target_path' " < "$path")
+      test "$("$DOCKER_BIN" wait $id)" -eq 0
+      "$DOCKER_BIN" commit $id $IMAGE > /dev/null
+      "$DOCKER_BIN" stop $id > /dev/null 2>&1 || true
+      "$DOCKER_BIN" kill $id > /dev/null 2>&1 || true
+    fi
+  done
 fi
