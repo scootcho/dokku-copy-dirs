@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+source "$PLUGIN_ENABLED_PATH/common/functions"
+APP="$1"
+verify_app_name "$APP"
+IMAGE=$(get_app_image_name $APP)
+FILE_ROOT="$DOKKU_ROOT/$APP/DOKKU_BUILD_FILES"
+
+DOCKER_BIN="${DOCKER_BIN:=docker}"
+
+if [[ -d "$FILE_ROOT" ]]; then
+  dokku_log_info1 "Adding build files to build environment ..."
+
+  # Extract node_modules archive (assuming it's named node_modules.tar)
+  tar -xf node_modules.tar -C /app
+
+  # Archive and copy remaining build files (if any)
+  tar -cf - -C "$FILE_ROOT" .  | "$DOCKER_BIN" run -i -a stdin $IMAGE tar -xf - -C /app
+
+  # Optional: Remove archive after extraction (if desired)
+  # rm /app/node_modules.tar
+fi
