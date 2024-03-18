@@ -1,4 +1,4 @@
 [plugin]
-description = "copy and extract node_module.tar into docker image"
+description = "copy files and directories into docker image"
 version = "0.1.0"
 [plugin.config]
