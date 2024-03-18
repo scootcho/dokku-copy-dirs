@@ -12,7 +12,10 @@ if [[ -d "$FILE_ROOT" ]]; then
   dokku_log_info1 "Adding build files to build environment ..."
 
   # Extract node_modules archive (assuming it's named node_modules.tar)
-  tar -xf node_modules.tar -C /app
+  # Check if node_modules.tar exists before extraction
+  if [[ -f "$FILE_ROOT/node_modules.tar" ]]; then
+    tar -xf "$FILE_ROOT/node_modules.tar" -C /app
+  fi
 
   # Archive and copy remaining build files (if any)
   tar -cf - -C "$FILE_ROOT" .  | "$DOCKER_BIN" run -i -a stdin $IMAGE tar -xf - -C /app
