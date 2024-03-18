@@ -1,26 +1,62 @@
 #!/usr/bin/env bash
-set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+
+# Set strict error handling (exit on errors, pipefail)
+set -eo pipefail;
+
+# Enable debug logging if DOKKU_TRACE is set
+[[ $DOKKU_TRACE ]] && set -x
+
+# Sources Dokku plugin command functions
 source "$PLUGIN_ENABLED_PATH/common/functions"
+
+# Get the application name from the first argument
 APP="$1"
+
+# Verify the app name using a function (likely defined elsewhere)
 verify_app_name "$APP"
+
+# Get the image name for the app using a function (likely defined elsewhere)
 IMAGE=$(get_app_image_name $APP)
+
+# Define the directory containing build files (modify if needed)
 FILE_ROOT="$DOKKU_ROOT/$APP/DOKKU_BUILD_FILES"
 
+# Define the docker binary path (use default if not set)
 DOCKER_BIN="${DOCKER_BIN:=docker}"
 
+# Check if the FILE_ROOT directory exists
 if [[ -d "$FILE_ROOT" ]]; then
+  # Log message indicating adding build files
   dokku_log_info1 "Adding build files to build environment ..."
-  shopt -s dotglob # include hidden files
+
+  # Enable processing hidden files in the loop
+  shopt -s dotglob
+
+  # Loop through all files and directories within FILE_ROOT (recursive with **)
   for path in "$FILE_ROOT/"**; do
-    target_path="/app/${path#$FILE_ROOT/}"  # Extract relative path
+    # Extract the relative path within the container (remove FILE_ROOT prefix)
+    target_path="/app/${path#$FILE_ROOT/}"
+
+    # Check if the path is a directory
     if [[ -d "$path" ]]; then
+      # Log message for creating a directory
       dokku_log_verbose "- Creating directory: $target_path"
+      # Run a container to create the directory with mkdir -p
       "$DOCKER_BIN" run -i "$IMAGE" mkdir -p "$target_path"
     else
+      # Log message for copying a file
       dokku_log_verbose "- Copying file: $target_path"
+
+      # Run a container to copy the file using cat (assuming 'cat' exists in the image)
       id=$("$DOCKER_BIN" run -i -a stdin "$IMAGE" /bin/bash -c "cat > '$target_path' " < "$path")
+
+      # Check if the container exited successfully (wait for id)
       test "$("$DOCKER_BIN" wait $id)" -eq 0
+
+      # Commit the temporary container with the copied file (optional)
       "$DOCKER_BIN" commit $id $IMAGE > /dev/null
+
+      # Stop and clean up the temporary container
       "$DOCKER_BIN" stop $id > /dev/null 2>&1 || true
       "$DOCKER_BIN" kill $id > /dev/null 2>&1 || true
     fi

@@ -1,9 +1,7 @@
 ## Copy build files plugin for Dokku
 
-Copies `node_modules.tar` from the host's /home/dokku/<APP>/DOKKU_BUILD_FILES directory to the /app directory of a dokku image before the image
+Copies files from host's /home/dokku/<APP>/DOKKU_BUILD_FILES directory to the /app directory of a dokku image before the image
 is built.
-
-Often times the deployment process will freeze and cripple the server during installing the node_modules. This attempts to mitigate that by utilizing your locally built node_modules (make sure node and npm versions are same on server)
 
 ## requirements
 
@@ -13,7 +11,7 @@ Often times the deployment process will freeze and cripple the server during ins
 ## installation
 
 ```shell
-dokku plugin:install https://github.com/scootcho/dokku-copy-node_modules.git copy-build-files
+dokku plugin:install https://github.com/scootcho/dokku-copy-dirs.git copy-build-files
 ```
 
 ## usage
